@@ -1,0 +1,92 @@
+---
+title: "Class 11: Structural Bioinformatics II"
+author: "Georgina Canto-Encalada"
+format: pdf
+---
+
+Alphafold is a cool new bioinformatics method for structure prediction from sequence.
+
+We can run Alphafold on our own computers by installing it or we can run on googleColab (without needing t install anything) via: 
+
+
+Return the full file name (i.e with the directory path) of the aligment file:
+```{r}
+path <- "hiv1dimer_23119/"
+aln_files <- list.files(path=path,
+                        pattern="*.a3m",
+                        full.names = TRUE)
+
+aln_files 
+
+```
+
+```{r}
+library(bio3d)
+aln<- read.fasta(aln_files, to.upper=TRUE)
+```
+
+```{r}
+attributes(aln)
+
+```
+
+This is a big aligment - almost too big to realy look at:
+```{r}
+dim(aln$ali)
+```
+
+Let's calculate sum summary info such as conservation scores.
+
+```{r}
+sim <- conserv(aln)
+```
+
+```{r}
+plot(sim, typ='h')
+```
+
+We can summarize these conserved columns (the ones with high scores above) via a consensus sequence.
+
+```{r}
+consensus(aln, cutoff=0.9)$seq
+```
+
+Read all our structure models into R
+
+Read the PAE (predicted aligned error files) into R to make sense of these different multichain models. There are stored as JSON format
+
+```{r}
+library(jsonlite)
+
+```
+
+Find our Json files
+
+```{r}
+pae.files<-list.files(path=path,
+                        pattern="*000.json",
+                        full.names = TRUE)
+```
+
+```{r}
+pae5 <- read_json(pae.files[5],simplifyVector = TRUE)
+pae1 <- read_json(pae.files[1],simplifyVector = TRUE)
+
+```
+
+```{r}
+dim(pae1$pae)
+```
+```{r}
+plot.dmat(pae1$pae)
+```
+
+```{r}
+plot.dmat(pae5$pae)
+```
+
+
+
+
+
+
