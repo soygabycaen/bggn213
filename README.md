@@ -1,7 +1,7 @@
 # bggn213
 My class work for W24 [BGGN213 at UC San Diego](https://bioboot.github.io/bggn213_W24/)
 
-- Class 1: [Welcome to Bioinformatics]()
+- Class 1: [Welcome to Bioinformatics](https://github.com/soygabycaen/bggn213/blob/main/Class01/lab1.pdf)
 
 - Class 2: [Sequence alignment fundamentals, algorithms and applications]
 
