@@ -3,9 +3,9 @@ My class work for W24 [BGGN213 at UC San Diego](https://bioboot.github.io/bggn21
 
 - Class 1: [Welcome to Bioinformatics](https://github.com/soygabycaen/bggn213/blob/main/Class01/lab1.pdf)
 
-- Class 2: [Sequence alignment fundamentals, algorithms and applications]
+- Class 2: [Sequence alignment fundamentals, algorithms and applications](https://github.com/soygabycaen/bggn213/blob/main/Class02/lab2.pdf)
 
-- Class 3: [Advanced sequence alignment and database searching]()
+- Class 3: [Advanced sequence alignment and database searching](https://github.com/soygabycaen/bggn213/blob/main/Class03/lab3.pdf)
 
 - Class 4: [Bioinformatics data analysis with R]()
 
