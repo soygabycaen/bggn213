@@ -38,6 +38,5 @@ Analysis of Human Breast Cancer Cells](https://github.com/soygabycaen/bggn213/bl
 
 - Class 18: [Mini Project: Investigating Pertussis Resurgence]()
 
-- Class 19: [Mini Project: Investigating Pertussis Resurgence]()
+- Class 19: [Mini Project: Cancer Mutation Analysis]()
 
-- Class 20: [Online portfolio completion plus bonus Bioinformatics in industry session]()
