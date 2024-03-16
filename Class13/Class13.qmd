@@ -1,0 +1,290 @@
+---
+title: "Class13"
+author: "Georgina Canto-Encalada"
+format: pdf
+---
+
+# Import countData and colData
+
+The data for this hands-on session comes from a published RNA-seq experiment where airway smooth muscle cells were treated with dexamethasone, a synthetic glucocorticoid steroid with anti-inflammatory effects (Himes et al. 2014).
+
+```{r}
+counts <- read.csv('airway_scaledcounts.csv',row.names=1)
+metadata <- read.csv("airway_metadata.csv")
+```
+
+Have we peal at what they look like:
+
+```{r}
+head(counts)
+```
+
+```{r}
+head(metadata)
+```
+
+> Q1. How many genes are in this dataset?
+
+ANS: 38694
+
+```{r}
+nrow(counts)
+```
+
+> Q. How many total samples?
+
+```{r}
+table(metadata$dex)
+```
+
+
+> Q2. How many ‘control’ cell lines do we have?
+
+ANS: 4
+
+```{r}
+sum(metadata$dex == "control")
+```
+
+> Q3. How would you make the above code in either approach more robust? Is there a function that could help here?
+
+Let's make sure our `metadata` matches the `counts`
+
+```{r}
+if(all(metadata$id == colnames(counts) ))
+  print("They match")
+```
+
+
+> Q4. Follow the same procedure for the treated samples (i.e. calculate the mean per gene across drug treated samples and assign to a labeled vector called treated.mean)
+
+We have a plan
+- first extract out the control samples (i.e. columns)
+- next calculate the row wise means (i.e. mean counts for each gene)
+
+```{r}
+# First where are the "control" samples
+control.counts <- counts[,metadata$dex=="control"]
+control.means<-apply(control.counts,1,mean)
+
+# Then where are the "treated" samples
+treated.counts <- counts[,metadata$dex=="treated"]
+treated.means<-apply(treated.counts,1,mean)
+
+```
+
+Store these together for ease of book-keeping
+
+```{r}
+meancounts <- data.frame(control.means,treated.means)
+```
+
+> Q5 (a). Create a scatter plot showing the mean of the treated samples against the mean of the control samples. Your plot should look something like the following.
+
+```{r}
+plot(meancounts)
+```
+
+> Q5 (b).You could also use the ggplot2 package to make this figure producing the plot below. What geom_?() function would you use for this plot? 
+
+ANS: geom_point()
+
+```{r}
+library(ggplot2)
+ggplot(meancounts) + aes(x=control.means,y=treated.means,alpha=0.5) + geom_point()
+
+```
+
+```{r}
+head(meancounts)
+```
+
+> Q6. Try plotting both axes on a log scale. What is the argument to plot() that allows you to do this?
+
+We have such skewed data over a wide range and we ultimately care about orders of magnitude change anyway so lets log transform
+
+```{r}
+plot(meancounts, log='xy')
+```
+
+We can look at differences here via a little fraction. Divide one condition by another. E.g. Treated/control
+
+
+```{r}
+log2(20/20)
+```
+
+```{r}
+log2(40/20)
+```
+
+```{r}
+log2(10/20)
+```
+
+Log2 fold change for our treated/control
+
+```{r}
+meancounts$log2fc<-log2(meancounts$treated.mean/meancounts$control.mean)
+                  
+```
+
+There are some weird results in here because of our zero count genes. We can't say anything about these genes anyway so it is common practice to remove them/filter them aout
+
+How can we identify zero count genes in our `meancounts`
+
+- First approach
+```{r}
+zero.vals <- which(meancounts[,1:2]==0, arr.ind=TRUE)
+
+to.rm <- unique(zero.vals[,1])
+mycounts <- meancounts[-to.rm,]
+head(mycounts)
+
+```
+
+> Q7. What is the purpose of the arr.ind argument in the which() function call above? Why would we then take the first column of the output and need to call the unique() function?
+
+ANS:  Instead of returning a single vector of indices, it returns a matrix of indices where each row corresponds to the indices of a TRUE element, with the first column representing row indices and the second column representing column indices. 
+The purpose of taking the first column of this output (zero.vals[,1]) is to identify all rows in meancounts that contain zeroes in either of the first two columns.
+Calling unique() on this vector of row indices is necessary because there might be multiple zeroes in different columns of the same row. Without calling unique(), you could end up with duplicate row indices in your vector
+
+- Second approach
+
+```{r}
+zero.sums <- rowSums(meancounts[,1:2]==0)
+to.rm.ind <- zero.sums >0
+mycounts <- meancounts[!to.rm.ind,]
+```
+
+
+A common threshold for calling something "differentially expressed" is a log2 fold-change value of +2 or -2
+
+> Q9. Can you determine how many up regulated genes we have at the greater than 2 fc level?
+
+ANS: 250
+
+```{r}
+sum(mycounts$log2fc>+2)
+```
+
+> Q8 Can you determine how many down regulated genes we have at the greater than 2 fc level?
+
+ANS: 367
+
+```{r}
+sum(mycounts$log2fc < (-2))
+
+```
+
+> Q10. Do you trust these results? Why or why not?
+
+ANS: I do not since we are not considering the p-value
+
+## DESeq2 Analysis
+
+Let's do this the right way with DESeq2
+
+```{r}
+
+#/ message: false
+library(DESeq2)
+```
+
+DESeq2 wants our data in a very particular object called a deseq object and we can set this up with functions from within the DESeq2 package
+
+```{r}
+dds<-DESeqDataSetFromMatrix(countData=counts,colData=metadata,design=~dex)
+
+```
+
+The main analysis function is called `DESeq()` and we can now pass it our setup input object with all the data we need
+
+```{r}
+dds <- DESeq(dds)
+
+```
+
+To get the results out of this `dds` object we can use the DESeq function `results()`
+
+```{r}
+res <- results(dds)
+head(res)
+```
+
+## Volcano plot
+
+A common visualization for this type of data is called a volcano plot. It is plot of log2 fold change against p-value
+
+```{r}
+plot( res$log2FoldChange,  -log(res$padj), 
+      xlab="Log2(FoldChange)",
+      ylab="-Log(P-value)")
+abline(v=c(-2,2), col="red", lty=2)
+abline(h=-log(0.05), col="red", lty=2)
+```
+
+Save our results thus far
+
+```{r}
+write.csv(res,file='myresults.csv')
+```
+
+
+## Adding annotation data
+
+Our result table so far only contains the Ensembl gene IDs. However, we want to be able to make sense of these genes. Minimally
+
+```{r}
+library("AnnotationDbi")
+library("org.Hs.eg.db")
+```
+
+```{r}
+columns(org.Hs.eg.db)
+```
+
+```{r}
+res$symbol <- mapIds(org.Hs.eg.db,
+                     keys=row.names(res), # Our genenames
+                     keytype="ENSEMBL",        # The format of our genenames
+                     column="ENTREZID",          # The new format we want to add
+                     multiVals="first")
+head(res)
+```
+
+we can arrange and view the results by the adjusted p-value
+
+```{r}
+ord <- order( res$padj )
+#View(res[ord,])
+head(res[ord,])
+```
+
+Finally, let’s write out the ordered significant results with annotations. 
+
+```{r}
+write.csv(res[ord,], "deseq_results.csv")
+```
+
+## Volcano plots
+
+```{r}
+# Setup our custom point color vector 
+mycols <- rep("gray", nrow(res))
+mycols[ abs(res$log2FoldChange) > 2 ]  <- "red" 
+
+inds <- (res$padj < 0.01) & (abs(res$log2FoldChange) > 2 )
+mycols[ inds ] <- "blue"
+
+# Volcano plot with custom colors 
+plot( res$log2FoldChange,  -log(res$padj), 
+ col=mycols, ylab="-Log(P-value)", xlab="Log2(FoldChange)" )
+
+# Cut-off lines
+abline(v=c(-2,2), col="gray", lty=2)
+abline(h=-log(0.1), col="gray", lty=2)
+```
+
+
+

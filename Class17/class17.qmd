@@ -1,0 +1,99 @@
+---
+title: "Class 17: Seq analysis on the cloud"
+author: "Georgina Canto-Encalada"
+format: pdf
+---
+
+Where are my files/results?
+
+```{r}
+library(tximport)
+
+# setup the folder and filenames to read
+folders <- dir(pattern="SRR21568*")
+samples <- sub("_quant", "", folders)
+files <- file.path( folders, "abundance.h5" )
+names(files) <- samples
+```
+
+```{r}
+txi.kallisto <- tximport(files, type = "kallisto", txOut = TRUE)
+head(txi.kallisto$counts)
+```
+
+We stimated transcript counts for each sample in R. Let's see how many transcripts we have for each sample:
+
+```{r}
+colSums(txi.kallisto$counts)
+
+```
+
+
+how many transcripts are detected in at least one sample?
+
+```{r}
+sum(rowSums(txi.kallisto$counts)>0)
+```
+
+Let's filter out annotated transcripts with no reads and with no change over the samples:
+
+```{r}
+# No reads
+to.keep <- rowSums(txi.kallisto$counts) > 0
+kset.nonzero <- txi.kallisto$counts[to.keep,]
+
+# No change (eliminating transripts with SD less than 0)
+keep2 <- apply(kset.nonzero,1,sd)>0
+x <- kset.nonzero[keep2,]
+```
+
+# PCA
+
+```{r}
+pca <- prcomp(t(x), scale=TRUE)
+summary(pca)
+```
+
+Now we can use the first two principal components as a co-ordinate system for visualizing the summarized transcriptomic profiles of each sample:
+
+```{r}
+plot(pca$x[,1], pca$x[,2],
+     col=c("blue","blue","red","red"),
+     xlab="PC1", ylab="PC2", pch=16)
+
+```
+
+Q. Use ggplot to make a similar figure of PC1 vs PC2 and a seperate figure PC1 vs PC3 and PC2 vs PC3.
+
+```{r}
+library(ggplot2)
+library(ggrepel)
+
+samp=colnames(txi.kallisto$counts)
+con=c("control","control","treatment","treatment")
+metadata<-data.frame(cbind(samp,con))
+
+pca.df<- data.frame(pca$x)
+pca.df$condition<-metadata$con
+ggplot(pca.df, aes(x=PC1,y=PC2,col=condition)) + geom_point() + 
+  geom_text_repel(label=metadata$samp)
+ggplot(pca.df, aes(x=PC1,y=PC3,col=condition)) + geom_point() + 
+  geom_text_repel(label=metadata$samp)
+ggplot(pca.df, aes(x=PC2,y=PC3,col=condition)) + geom_point() + 
+  geom_text_repel(label=metadata$samp)
+
+  
+```
+
+We can observe that PC1 is separating controls and treatments while PC2 is separating the controls.PC3 separates the two enhancer-targeting CRISPR samples from each other.
+
+
+
+
+
+
+
+
+
+
+

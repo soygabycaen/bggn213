@@ -1,0 +1,200 @@
+---
+title: "Class 14: RNA-Seq analysis mini-project"
+author: "Georgina Canto-Encalada"
+format: pdf
+---
+
+# Section 1. Differential Expression Analysis
+
+## Data import
+
+```{r}
+
+
+metaFile <- "GSE37704_metadata.csv"
+countFile <- "GSE37704_featurecounts.csv"
+
+# Import metadata and take a peak
+metadata<- read.csv(metaFile)
+counts<- read.csv(countFile, row.names=1)
+
+```
+
+## Data exploration
+
+```{r}
+head(counts)
+head(metadata)
+```
+## Check for metadata - counts correspond
+
+```{r}
+countdata<-counts[,-1]
+all(colnames(countdata)==metadata$id)
+
+
+```
+
+## Filter out zero count genes
+
+We can sum across the rows and then remove those with zero sums
+```{r}
+non.zero.inds <- rowSums(countdata)>0
+non.zero.counts<-countdata[non.zero.inds,]
+head(non.zero.counts)
+```
+
+> Q. How many genes do we have with non zero counts?
+
+```{r}
+nrow(non.zero.counts)
+```
+
+
+## Setup for Deseq
+
+```{r}
+#/ message: false
+library(DESeq2)
+
+```
+
+## DESeq Analysis
+
+```{r}
+dds<-DESeqDataSetFromMatrix(countData=non.zero.counts,colData=metadata,design=~condition)
+dds <- DESeq(dds)
+res <- results(dds)
+```
+
+## Result extraction and visualization
+
+Let's use a volcano plot to show results
+
+```{r}
+library(ggplot2)
+
+#Transforming res to a data frame
+df <- as.data.frame(res)
+mycols<- rep("gray",nrow(df))
+mycols[abs(res$log2FoldChange)>2]<- "blue"
+mycols[res$padj>=0.05]<- "red"
+
+ggplot(df) + aes(x=log2FoldChange,y=-log(padj)) + geom_point(col=mycols)
+```
+
+## Pathway analysis
+
+## 
+```{r}
+
+library("AnnotationDbi")
+library("org.Hs.eg.db")
+```
+
+Let's see the databases that we can translate between:
+```{r}
+columns(org.Hs.eg.db)
+
+```
+
+We can now use these "columns" with the mapIds() function to translate between databases identifiers
+
+```{r}
+res$symbol<- mapIds(org.Hs.eg.db,keys=row.names(res),keytype="ENSEMBL", column="SYMBOL",multiVals="first")
+
+res$entrz <- mapIds(org.Hs.eg.db,keys=row.names(res),keytype="ENSEMBL",column="ENTREZID",multiVals="first")
+
+res$genename =   mapIds(org.Hs.eg.db,
+                    keys=row.names(res),
+                    keytype="ENSEMBL",
+                    column="GENENAME",multiVals="first")
+```
+
+### KEGG and GO analysis
+
+BiocManager::install(c("pathview","gage","gageData"))
+
+```{r}
+library(gage)
+library(gageData)
+library(pathview)
+```
+
+The gage function and wants as input a vector of, in this case, fold changes with names of the genes in a format that matches the database/geneset we are going to use.
+
+```{r}
+res = res[order(res$pvalue),]
+foldchanges <- res$log2FoldChange
+names(foldchanges) <- res$entrz
+head(foldchanges)
+```
+
+## Kegg pathways
+
+```{r}
+data(kegg.sets.hs)
+data(sigmet.idx.hs)
+# Focus on signaling and metabolic pathways only
+kegg.sets.hs = kegg.sets.hs[sigmet.idx.hs]
+
+```
+
+
+```{r}
+# Get the results
+keggres = gage(foldchanges, gsets=kegg.sets.hs)
+head(keggres$less)
+```
+
+
+```{r}
+pathview(foldchanges,pathway.id="hsa04110")
+```
+
+# Section 3. Gene Ontology (GO)
+
+```{r}
+data(go.sets.hs)
+data(go.subs.hs)
+
+# Focus on Biological Process subset of GO
+gobpsets <- go.sets.hs[go.subs.hs$BP]
+gobpres <- gage(foldchanges, gsets=gobpsets, same.dir=TRUE)
+
+```
+
+Have a wee look at the $less here also...
+
+```{r}
+head(gobpres$less)
+```
+
+# Section 4. Reactome Analysis
+
+We need a list of genes as a text file for using the reactome online site.
+
+Let's start with our genes that have a abs(log2FC) > 2 and a P-value <0.05
+
+
+```{r}
+c(T,T) & c(T,F)
+```
+
+```{r}
+inds <-abs(res$log2FoldChange) >2 & (res$padj < 0.05)
+mygenes<-res$symbol[inds]
+cat(head(mygenes),sep="\n")
+```
+
+```{r}
+write.table(mygenes,file="mygenes.txt",quote=FALSE,col.names=FALSE,row.names=FALSE)
+```
+
+![Cell-cell communication]("R-HSA-1500931.png")
+
+
+
+
+
+

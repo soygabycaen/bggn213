@@ -1,0 +1,1 @@
+ ssh -i "bggn213_Gaby2.pem" ubuntu@ec2-54-212-3-177.us-west-2.compute.amazonaws.com
