@@ -16,7 +16,7 @@ My class work for W24 [BGGN213 at UC San Diego](https://bioboot.github.io/bggn21
 - Class 7: [Introduction to machine learning for Bioinformatics]()
 
 - Class 8: [Mini-Project: Unsupervised Learning
-Analysis of Human Breast Cancer Cells](https://github.com/soygabycaen/bggn213/tree/main/Class08)
+Analysis of Human Breast Cancer Cells](https://github.com/soygabycaen/bggn213/blob/main/Class08/class08.md)
 
 - Class 9: [Halloween Candy Mini-Project](https://bioboot.github.io/bggn213_W24/class-material/Halloween_candy.html)
 
